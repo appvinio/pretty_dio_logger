@@ -33,6 +33,8 @@ class PrettyDioLogger extends Interceptor {
   /// Width size per logPrint
   final int maxWidth;
 
+  final List<String> contentTypeFilter;
+
   /// Log printer; defaults logPrint log to console.
   /// In flutter, you'd better use debugPrint.
   /// you can also write log in a file.
@@ -40,14 +42,15 @@ class PrettyDioLogger extends Interceptor {
 
   PrettyDioLogger(
       {this.request = true,
-      this.requestHeader = false,
-      this.requestBody = false,
-      this.responseHeader = false,
-      this.responseBody = true,
-      this.error = true,
-      this.maxWidth = 90,
-      this.compact = true,
-      this.logPrint = print});
+        this.requestHeader = false,
+        this.requestBody = false,
+        this.responseHeader = false,
+        this.responseBody = true,
+        this.error = true,
+        this.maxWidth = 90,
+        this.compact = true,
+        this.contentTypeFilter = const [],
+        this.logPrint = print});
 
   @override
   void onRequest(RequestOptions options, RequestInterceptorHandler handler) {
@@ -90,7 +93,7 @@ class PrettyDioLogger extends Interceptor {
         final uri = err.response?.requestOptions.uri;
         _printBoxed(
             header:
-                'DioError ║ Status: ${err.response?.statusCode} ${err.response?.statusMessage}',
+            'DioError ║ Status: ${err.response?.statusCode} ${err.response?.statusMessage}',
             text: uri.toString());
         if (err.response != null && err.response?.data != null) {
           logPrint('╔ ${err.type.toString()}');
@@ -108,6 +111,7 @@ class PrettyDioLogger extends Interceptor {
   @override
   void onResponse(Response response, ResponseInterceptorHandler handler) {
     _printResponseHeader(response);
+
     if (responseHeader) {
       final responseHeaders = <String, String>{};
       response.headers
@@ -115,7 +119,13 @@ class PrettyDioLogger extends Interceptor {
       _printMapAsTable(responseHeaders, header: 'Headers');
     }
 
-    if (responseBody) {
+    final contentTypeHeader = response.headers[Headers.contentTypeHeader] ?? [];
+    final filterMatch = contentTypeFilter.isNotEmpty
+        ? contentTypeFilter.any((filter) => contentTypeHeader
+        .any((element) => element.toLowerCase() == filter.toLowerCase()))
+        : true;
+
+    if (responseBody && filterMatch) {
       logPrint('╔ Body');
       logPrint('║');
       _printResponse(response);
@@ -151,7 +161,7 @@ class PrettyDioLogger extends Interceptor {
     final method = response.requestOptions.method;
     _printBoxed(
         header:
-            'Response ║ $method ║ Status: ${response.statusCode} ${response.statusMessage}',
+        'Response ║ $method ║ Status: ${response.statusCode} ${response.statusMessage}',
         text: uri.toString());
   }
 
@@ -188,11 +198,11 @@ class PrettyDioLogger extends Interceptor {
   String _indent([int tabCount = initialTab]) => tabStep * tabCount;
 
   void _printPrettyMap(
-    Map data, {
-    int tabs = initialTab,
-    bool isListItem = false,
-    bool isLast = false,
-  }) {
+      Map data, {
+        int tabs = initialTab,
+        bool isListItem = false,
+        bool isLast = false,
+      }) {
     var _tabs = tabs;
     final isRoot = _tabs == initialTab;
     final initialIndent = _indent(_tabs);
@@ -257,8 +267,8 @@ class PrettyDioLogger extends Interceptor {
 
   bool _canFlattenMap(Map map) {
     return map.values
-            .where((dynamic val) => val is Map || val is List)
-            .isEmpty &&
+        .where((dynamic val) => val is Map || val is List)
+        .isEmpty &&
         map.toString().length < maxWidth;
   }
 
@@ -270,7 +280,7 @@ class PrettyDioLogger extends Interceptor {
     if (map == null || map.isEmpty) return;
     logPrint('╔ $header ');
     map.forEach(
-        (dynamic key, dynamic value) => _printKV(key.toString(), value));
+            (dynamic key, dynamic value) => _printKV(key.toString(), value));
     _printLine('╚');
   }
 }

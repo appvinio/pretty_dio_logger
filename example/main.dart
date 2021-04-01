@@ -9,10 +9,12 @@ void main() async {
       responseBody: true,
       responseHeader: false,
       compact: false,
+      contentTypeFilter: [Headers.jsonContentType]
     ));
 
   try {
     await dio.get('http://www.mocky.io/v2/5d7fc75c3300000476f0b557');
+    await dio.get('https://picsum.photos/id/237/200/300');
   } catch (e) {
     print(e);
   }
