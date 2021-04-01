@@ -17,6 +17,7 @@ dio.interceptors.add(PrettyDioLogger());
         responseHeader: false,
         error: true,
         compact: true,
+        contentTypeFilter: [Headers.jsonContentType]
         maxWidth: 90));
 ```
 
