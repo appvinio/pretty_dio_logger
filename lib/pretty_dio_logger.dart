@@ -35,10 +35,18 @@ class PrettyDioLogger extends Interceptor {
 
   final List<String> contentTypeFilter;
 
+  final bool shortenBase64String;
+
   /// Log printer; defaults logPrint log to console.
   /// In flutter, you'd better use debugPrint.
   /// you can also write log in a file.
   void Function(Object object) logPrint;
+
+  final regExp = new RegExp(
+    r"^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$",
+    caseSensitive: false,
+    multiLine: false,
+  );
 
   PrettyDioLogger(
       {this.request = true,
@@ -49,6 +57,7 @@ class PrettyDioLogger extends Interceptor {
         this.error = true,
         this.maxWidth = 90,
         this.compact = true,
+        this.shortenBase64String = false,
         this.contentTypeFilter = const [],
         this.logPrint = print});
 
@@ -232,7 +241,14 @@ class PrettyDioLogger extends Interceptor {
           logPrint('║${_indent(_tabs)} ]${isLast ? '' : ','}');
         }
       } else {
-        final msg = value.toString().replaceAll('\n', '');
+        String msg = value.toString().replaceAll('\n', '');
+        if (shortenBase64String) {
+          final unwrappedMsg = msg.replaceAll('\"', '');
+          final isBase64String = regExp.hasMatch(unwrappedMsg);
+          if (isBase64String) {
+            msg = "\"==base64String==\"";
+          }
+        }
         final indent = _indent(_tabs);
         final linWidth = maxWidth - indent.length;
         if (msg.length + indent.length > linWidth) {
