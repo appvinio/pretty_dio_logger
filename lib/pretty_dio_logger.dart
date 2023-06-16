@@ -2,6 +2,8 @@ import 'dart:math' as math;
 
 import 'package:dio/dio.dart';
 
+typedef LogFilter<T> = bool Function(T object);
+
 class PrettyDioLogger extends Interceptor {
   /// Print request [Options]
   final bool request;
@@ -33,14 +35,15 @@ class PrettyDioLogger extends Interceptor {
   /// Width size per logPrint
   final int maxWidth;
 
-  final List<String> contentTypeFilter;
-
   final bool shortenBase64String;
 
   /// Log printer; defaults logPrint log to console.
   /// In flutter, you'd better use debugPrint.
   /// you can also write log in a file.
   void Function(Object object) logPrint;
+
+  List<LogFilter<RequestOptions>> requestBodyFilter;
+  List<LogFilter<Response>> responseBodyFilter;
 
   final regExp = new RegExp(
     r"^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$",
@@ -58,7 +61,8 @@ class PrettyDioLogger extends Interceptor {
         this.maxWidth = 90,
         this.compact = true,
         this.shortenBase64String = false,
-        this.contentTypeFilter = const [],
+        this.requestBodyFilter = const [],
+        this.responseBodyFilter = const [],
         this.logPrint = print});
 
   @override
@@ -78,7 +82,7 @@ class PrettyDioLogger extends Interceptor {
       _printMapAsTable(requestHeaders, header: 'Headers');
       _printMapAsTable(options.extra, header: 'Extras');
     }
-    if (requestBody && options.method != 'GET') {
+    if (requestBody && options.method != 'GET' && requestBodyFilter.every((element) => !element(options))) {
       final dynamic data = options.data;
       if (data != null) {
         if (data is Map) _printMapAsTable(options.data as Map?, header: 'Body');
@@ -128,13 +132,7 @@ class PrettyDioLogger extends Interceptor {
       _printMapAsTable(responseHeaders, header: 'Headers');
     }
 
-    final contentTypeHeader = response.headers[Headers.contentTypeHeader] ?? [];
-    final filterMatch = contentTypeFilter.isNotEmpty
-        ? contentTypeFilter.any((filter) => contentTypeHeader
-        .any((element) => element.toLowerCase() == filter.toLowerCase()))
-        : true;
-
-    if (responseBody && filterMatch) {
+    if (responseBody && responseBodyFilter.every((element) => !element(response))) {
       logPrint('╔ Body');
       logPrint('║');
       _printResponse(response);

@@ -18,7 +18,8 @@ dio.interceptors.add(PrettyDioLogger());
         error: true,
         compact: true,
         shortenBase64String: true,
-        contentTypeFilter: [Headers.jsonContentType],
+        requestBodyFilter: [],
+        responseBodyFilter: [],
         maxWidth: 90));
 ```
 

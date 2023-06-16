@@ -9,8 +9,9 @@ void main() async {
       responseBody: true,
       responseHeader: false,
       compact: false,
-      contentTypeFilter: [Headers.jsonContentType],
       shortenBase64String: true,
+      requestBodyFilter: [],
+      responseBodyFilter: [],
     ));
 
   try {
